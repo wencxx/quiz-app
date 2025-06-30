@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Clock, FileText, CheckCircle, XCircle, Trophy, RotateCcw, Play, Timer } from "lucide-react"
+import { Clock, FileText, Trophy, Play, Timer } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/context/AuthContext"
 
