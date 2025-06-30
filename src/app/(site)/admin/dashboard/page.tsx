@@ -7,9 +7,26 @@ import { ChartContainer, ChartTooltip, ChartLegend } from "@/components/ui/chart
 import * as RechartsPrimitive from "recharts";
 import { User, ListChecks, FileBarChart2 } from "lucide-react";
 
+type DashboardRole = { _id: string; count: number };
+type DashboardAvgScore = { quizName: string; avgScore: number; submissions: number };
+type DashboardRecentAnswer = {
+  _id?: string;
+  userId?: { name?: string };
+  quizId?: { name?: string };
+  score?: number;
+  createdAt?: string;
+};
+type DashboardData = {
+  roles: DashboardRole[];
+  totalQuizzes: number;
+  totalAnswers: number;
+  avgScores: DashboardAvgScore[];
+  recentAnswers: DashboardRecentAnswer[];
+};
+
 export default function Page() {
   const { userData } = useAuth();
-  const [dashboard, setDashboard] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,14 +44,8 @@ export default function Page() {
   if (!dashboard) return <div>Failed to load dashboard data.</div>;
 
   // Prepare chart data
-  const totalStudents = dashboard.roles.find((role: any) => role._id === "student")?.count || 0;
-  const quizScoresData = dashboard.avgScores.map((quiz: any) => ({ name: quiz.quizName, avgScore: quiz.avgScore ?? 0 }));
-  const chartConfig = {
-    users: { label: "Users", color: "#8884d8" },
-    quizzes: { label: "Quizzes", color: "#82ca9d" },
-    answers: { label: "Answers", color: "#ffc658" },
-    avgScore: { label: "Average Score", color: "#8884d8" },
-  };
+  const totalStudents = dashboard.roles.find((role) => role._id === "student")?.count || 0;
+  const quizScoresData = dashboard.avgScores.map((quiz) => ({ name: quiz.quizName, avgScore: quiz.avgScore ?? 0 }));
 
   return (
     <div className="space-y-6">
@@ -101,13 +112,13 @@ export default function Page() {
                 </tr>
               </thead>
               <tbody>
-                {dashboard.recentAnswers.map((ans: any, idx: number) => (
+                {dashboard.recentAnswers.map((ans, idx) => (
                   <tr key={ans._id || idx} className="border-b hover:bg-muted/50">
                     <td className="px-2 py-1">{idx + 1}</td>
                     <td className="px-2 py-1">{ans.userId?.name}</td>
                     <td className="px-2 py-1">{ans.quizId?.name}</td>
                     <td className="px-2 py-1">{ans.score}</td>
-                    <td className="px-2 py-1">{new Date(ans.createdAt).toLocaleString()}</td>
+                    <td className="px-2 py-1">{ans.createdAt ? new Date(ans.createdAt).toLocaleString() : ""}</td>
                   </tr>
                 ))}
               </tbody>

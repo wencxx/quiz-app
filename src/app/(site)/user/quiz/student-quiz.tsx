@@ -51,7 +51,7 @@ export default function StudentQuiz() {
   const [answers, setAnswers] = useState<(number | string)[]>([])
   const [timeLeft, setTimeLeft] = useState(0)
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null)
-  const [attempts, setAttempts] = useState<QuizAttempt[]>([])
+  const [attempts] = useState<QuizAttempt[]>([])
   const [takenQuizIds, setTakenQuizIds] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
 
@@ -77,6 +77,44 @@ export default function StudentQuiz() {
     }
     fetchQuizzes()
   }, [])
+
+  const handleSubmitQuiz = async () => {
+    if (!selectedQuiz || !quizStartTime || !userData?._id) return
+
+    setSubmitting(true)
+    let score = 0
+    selectedQuiz.questions.forEach((question, index) => {
+      if (question.type === "multiple-choice" || question.type === "true-false") {
+        if (answers[index] === question.correctAnswer) {
+          score++
+        }
+      }
+      // Essay questions are not auto-scored
+    })
+
+    const timeSpent = Math.floor((new Date().getTime() - quizStartTime.getTime()) / 1000)
+
+    // Save result to backend
+    try {
+      await axios.post("/api/answer", {
+        quizId: selectedQuiz._id || selectedQuiz.id,
+        userId: userData._id,
+        answers: selectedQuiz.questions.map((q, idx) => ({
+          questionIndex: idx,
+          answer: answers[idx]
+        })),
+        timeSpent, // <-- send timeSpent
+        score      // <-- send score
+      })
+    } catch (e) {
+      // Optionally handle error (e.g., show notification)
+    }
+
+    // Navigate to result page
+    const quizId = selectedQuiz._id || selectedQuiz.id
+    router.push(`/user/result/${quizId}`)
+    setSubmitting(false)
+  }
 
   // Check if user already took a quiz
   useEffect(() => {
@@ -124,7 +162,7 @@ export default function StudentQuiz() {
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [currentView, timeLeft])
+  }, [currentView, timeLeft, handleSubmitQuiz])
 
   const startQuiz = async (quiz: Quiz) => {
     // Check if already taken (double check for race condition)
@@ -172,44 +210,6 @@ export default function StudentQuiz() {
     }
   }
 
-  const handleSubmitQuiz = async () => {
-    if (!selectedQuiz || !quizStartTime || !userData?._id) return
-
-    setSubmitting(true)
-    let score = 0
-    selectedQuiz.questions.forEach((question, index) => {
-      if (question.type === "multiple-choice" || question.type === "true-false") {
-        if (answers[index] === question.correctAnswer) {
-          score++
-        }
-      }
-      // Essay questions are not auto-scored
-    })
-
-    const timeSpent = Math.floor((new Date().getTime() - quizStartTime.getTime()) / 1000)
-
-    // Save result to backend
-    try {
-      await axios.post("/api/answer", {
-        quizId: selectedQuiz._id || selectedQuiz.id,
-        userId: userData._id,
-        answers: selectedQuiz.questions.map((q, idx) => ({
-          questionIndex: idx,
-          answer: answers[idx]
-        })),
-        timeSpent, // <-- send timeSpent
-        score      // <-- send score
-      })
-    } catch (e) {
-      // Optionally handle error (e.g., show notification)
-    }
-
-    // Navigate to result page
-    const quizId = selectedQuiz._id || selectedQuiz.id
-    router.push(`/user/result/${quizId}`)
-    setSubmitting(false)
-  }
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -220,12 +220,6 @@ export default function StudentQuiz() {
     if (percentage >= 80) return "text-green-600"
     if (percentage >= 60) return "text-yellow-600"
     return "text-red-600"
-  }
-
-  const getScoreBadgeVariant = (percentage: number) => {
-    if (percentage >= 80) return "default"
-    if (percentage >= 60) return "secondary"
-    return "destructive"
   }
 
   // Quiz List View

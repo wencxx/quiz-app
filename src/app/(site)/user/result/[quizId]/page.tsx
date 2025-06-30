@@ -27,14 +27,38 @@ function getScoreBadgeVariant(percentage: number) {
   return "destructive"
 }
 
+interface Quiz {
+  _id?: string
+  id?: string
+  name: string
+  description: string
+  questions: Question[]
+}
+
+interface Question {
+  id?: string
+  type: "multiple-choice" | "true-false" | "essay"
+  question: string
+  options: string[]
+  correctAnswer: number | string
+}
+
+interface Attempt {
+  answers: (number | string)[]
+  score: number
+  totalQuestions: number
+  timeSpent: number
+  completedAt: string
+}
+
 export default function QuizResultPage() {
   const params = useParams()
   const router = useRouter()
   const { userData } = useAuth()
   const quizId = params.quizId as string
 
-  const [quiz, setQuiz] = useState<any>(null)
-  const [attempt, setAttempt] = useState<any>(null)
+  const [quiz, setQuiz] = useState<Quiz | null>(null)
+  const [attempt, setAttempt] = useState<Attempt | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -48,13 +72,13 @@ export default function QuizResultPage() {
             : Promise.resolve({ data: null })
         ])
         const foundQuiz = Array.isArray(quizRes.data)
-          ? quizRes.data.find((q: any) => (q._id || q.id) === quizId)
+          ? quizRes.data.find((q: Quiz) => (q._id || q.id) === quizId)
           : null
         setQuiz(foundQuiz)
         if (answerRes.data && answerRes.data.result && foundQuiz) {
           // Calculate score
           let score = 0
-          foundQuiz.questions.forEach((question: any, idx: number) => {
+          foundQuiz.questions.forEach((question: Question, idx: number) => {
             if (question.type === "multiple-choice" || question.type === "true-false") {
               if (answerRes.data.result.answers[idx]?.answer === question.correctAnswer) {
                 score++
@@ -62,7 +86,7 @@ export default function QuizResultPage() {
             }
           })
           setAttempt({
-            answers: answerRes.data.result.answers.map((a: any) => a.answer),
+            answers: answerRes.data.result.answers.map((a: { answer: number | string }) => a.answer),
             score,
             totalQuestions: foundQuiz.questions.length,
             timeSpent: answerRes.data.result.timeSpent || 0, // use backend value
@@ -107,7 +131,7 @@ export default function QuizResultPage() {
         <CardContent>
           <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No attempt found</h3>
-          <p className="text-muted-foreground mb-4">You haven't taken this quiz yet.</p>
+          <p className="text-muted-foreground mb-4">You haven&apos;t taken this quiz yet.</p>
           <Button onClick={() => router.push("/user/quiz")}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Back to Quizzes

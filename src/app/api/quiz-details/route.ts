@@ -1,7 +1,7 @@
 // app/api/quiz-details/answers/route.ts
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
-import { User } from "@/models/user" // <-- MUST be first model import
+// import { User } from "@/models/user" // <-- Remove this line
 import { Quiz } from "@/models/quiz"
 import { Answer } from "@/models/answers"
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   }
 
   // Safely extract name and description
-  const { name = "N/A", description = "N/A" } = quiz as any
+  const { name = "N/A", description = "N/A" } = quiz as { name?: string; description?: string }
 
   // Fetch answers
   const answers = await Answer.find({ quizId })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Plus, Clock, FileText, Trash2, CheckCircle, Minus, Pencil, Eye } from "lucide-react"
+import { Plus, Clock, FileText, Trash2, CheckCircle, Minus, Pencil } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -169,15 +169,15 @@ export default function QuizComponent() {
         setIsAddQuizOpen(false)
       }
       console.log(res.data)
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Enhanced backend error logging
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.error("Backend error:", error.response.data)
         alert("Backend error: " + JSON.stringify(error.response.data, null, 2))
-      } else if (error.request) {
+      } else if (axios.isAxiosError(error) && error.request) {
         console.error("No response from backend:", error.request)
         alert("No response from backend. See console for details.")
-      } else {
+      } else if (error instanceof Error) {
         console.error("Error:", error.message)
         alert("Error: " + error.message)
       }
@@ -227,10 +227,10 @@ export default function QuizComponent() {
     }
   }
 
-  const updateQuestion = (index: number, field: keyof QuestionForm, value: any) => {
+  const updateQuestion = (index: number, field: keyof QuestionForm, value: unknown) => {
     const updated = [...questionsForm]
     if (field === "type") {
-      updated[index].type = value
+      updated[index].type = value as QuestionForm["type"]
       if (value === "multiple-choice") {
         updated[index].options = ["", "", "", ""]
         updated[index].correctAnswer = 0
@@ -242,7 +242,7 @@ export default function QuizComponent() {
         updated[index].correctAnswer = ""
       }
     } else {
-      updated[index][field] = value
+      updated[index][field] = value as never
     }
     setQuestionsForm(updated)
   }
@@ -776,51 +776,53 @@ export default function QuizComponent() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {quizzes.map((quiz) => (
-              <Link key={quiz._id} href={`/admin/answers/${quiz._id}`}>
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{quiz.name}</CardTitle>
-                        <CardDescription className="mt-1">{quiz.description}</CardDescription>
-                      </div>
-                      <div className="flex">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditQuiz(quiz)}
-                          className="text-green-500 hover:text-green-600"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
+              <Card key={quiz._id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">
+                        <Link href={`/admin/answers/${quiz._id}`}>
+                          {quiz.name}
+                        </Link>
+                      </CardTitle>
+                      <CardDescription className="mt-1">{quiz.description}</CardDescription>
+                    </div>
+                    <div className="flex">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditQuiz(quiz)}
+                        className="text-green-500 hover:text-green-600"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteQuiz(quiz._id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteQuiz(quiz._id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        {quiz.timer} minutes
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary">{quiz.questions.length} questions</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Created {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : "N/A"}
-                        </span>
-                      </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      {quiz.timer} minutes
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary">{quiz.questions.length} questions</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Created {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
             ))}
           </div>

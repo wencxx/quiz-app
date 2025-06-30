@@ -12,7 +12,7 @@ export async function GET(){
     return NextResponse.json(quizzes, { status: 200 })
 }
 
-export async function POST(request: any){
+export async function POST(request: Request){
     await connectDB()
 
     const body = await request.json()
@@ -21,7 +21,7 @@ export async function POST(request: any){
         question: string;
         options?: string[];
         correctAnswer?: number | string;
-        [key: string]: any;
+        [key: string]: unknown;
     };
 
     if (Array.isArray(body.questions)) {
@@ -59,20 +59,21 @@ export async function POST(request: any){
     try {
         const newQuiz = await Quiz.create(body)
         return NextResponse.json(newQuiz, { status: 200 })
-    } catch (err: any) {
-        console.error("Quiz.create error:", err)
+    } catch (err: unknown) {
+        const error = err as Error
+        console.error("Quiz.create error:", error)
         return NextResponse.json(
-            { status: 500, message: err.message || "Unknown server error", error: err },
+            { status: 500, message: error.message || "Unknown server error", error },
             { status: 500 }
         )
     }
 }
 
-export async function DELETE(request: any) {
+export async function DELETE(request: Request) {
     await connectDB();
 
     // Get quizId from query or body
-    let quizId = null;
+    let quizId: string | null = null;
     if (request.method === 'DELETE') {
         // For fetch with body
         try {
@@ -98,7 +99,7 @@ export async function DELETE(request: any) {
     return NextResponse.json({ status: 200, message: 'Quiz deleted' });
 }
 
-export async function PUT(request: any) {
+export async function PUT(request: Request) {
     await connectDB();
     const body = await request.json();
     const { quizId, name, description, timer, questions } = body;
