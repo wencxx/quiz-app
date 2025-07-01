@@ -40,9 +40,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       return
     }
 
-    // If authenticated and role is student, restrict to /user/quiz and /user/result
+    // If authenticated and role is student, restrict to /user/quiz, /user/result, and /user/take-quiz
     if (isAuth && userData?.role === "student") {
-      if (pathname !== "/user/quiz" && !pathname.startsWith("/user/result")) {
+      if (
+        pathname !== "/user/quiz" &&
+        !pathname.startsWith("/user/result") &&
+        !pathname.startsWith("/user/take-quiz")
+      ) {
         router.replace("/user/quiz")
         return
       }
@@ -69,7 +73,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return <Loading />
   }
   // Prevent rendering children if student tries to access forbidden routes
-  if (isAuth && userData?.role === "student" && pathname !== "/user/quiz" && !pathname.startsWith("/user/result")) {
+  if (
+    isAuth &&
+    userData?.role === "student" &&
+    pathname !== "/user/quiz" &&
+    !pathname.startsWith("/user/result") &&
+    !pathname.startsWith("/user/take-quiz")
+  ) {
     return <Loading />
   }
   // Prevent rendering children if non-student tries to access student routes

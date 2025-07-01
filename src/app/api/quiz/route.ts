@@ -16,6 +16,7 @@ export async function POST(request: Request){
     await connectDB()
 
     const body = await request.json()
+    console.log(body)
     type QuestionInput = {
         type: "multiple-choice" | "true-false" | "essay";
         question: string;

@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Clock, FileText, Trophy, Play, Timer } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
+import { Clock, FileText, Trophy,  } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 interface Question {
   id?: string
@@ -25,6 +23,7 @@ interface Quiz {
   _id?: string
   id?: string
   name: string
+  subject: string
   description: string
   timer: number // in minutes
   questions: Question[]
@@ -47,13 +46,13 @@ export default function StudentQuiz() {
   const [loading, setLoading] = useState(true)
   const [currentView, setCurrentView] = useState<ViewMode>("list")
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<(number | string)[]>([])
-  const [timeLeft, setTimeLeft] = useState(0)
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null)
   const [attempts] = useState<QuizAttempt[]>([])
   const [takenQuizIds, setTakenQuizIds] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [quizLink, setQuizLink] = useState("")
 
   const { userData } = useAuth()
   const router = useRouter()
@@ -147,23 +146,6 @@ export default function StudentQuiz() {
     fetchTakenQuizzes()
   }, [userData?._id])
 
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (currentView === "taking" && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleSubmitQuiz()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-    return () => clearInterval(interval)
-  }, [currentView, timeLeft, handleSubmitQuiz])
-
   const startQuiz = async (quiz: Quiz) => {
     // Check if already taken (double check for race condition)
     const quizId = quiz._id || quiz.id || ""
@@ -171,43 +153,8 @@ export default function StudentQuiz() {
       router.push(`/user/result/${quizId}`)
       return
     }
-
-    setSelectedQuiz(quiz)
-    setCurrentQuestionIndex(0)
-    setAnswers(
-      quiz.questions.map(q =>
-        q.type === "essay" ? "" : -1
-      )
-    )
-    setTimeLeft(quiz.timer * 60)
-    setQuizStartTime(new Date())
-    setCurrentView("taking")
-  }
-
-  // For MCQ/TF
-  const handleAnswerSelect = (answerIndex: number) => {
-    const newAnswers = [...answers]
-    newAnswers[currentQuestionIndex] = answerIndex
-    setAnswers(newAnswers)
-  }
-
-  // For essay
-  const handleEssayAnswer = (value: string) => {
-    const newAnswers = [...answers]
-    newAnswers[currentQuestionIndex] = value
-    setAnswers(newAnswers)
-  }
-
-  const goToNextQuestion = () => {
-    if (selectedQuiz && currentQuestionIndex < selectedQuiz.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-    }
-  }
-
-  const goToPreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1)
-    }
+    // Instead of setting state, redirect to take-quiz page
+    router.push(`/user/take-quiz/${quizId}`)
   }
 
   const formatTime = (seconds: number) => {
@@ -224,26 +171,84 @@ export default function StudentQuiz() {
 
   // Quiz List View
   if (currentView === "list") {
+    // Filter quizzes to only those the user has already taken
+    const takenQuizzes = quizzes.filter((quiz) => {
+      const quizId = quiz._id || quiz.id || ""
+      return takenQuizIds.includes(quizId)
+    })
+
     return (
       <div>
+        {/* Enter Quiz Link button at the top */}
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={() => setShowModal(true)}
+            className="bg-green-500 hover:bg-green-600"
+          >
+            Enter Quiz Link
+          </Button>
+        </div>
+
+        {/* Modal for entering quiz link */}
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enter Quiz Link or Code</DialogTitle>
+            </DialogHeader>
+            <Input
+              placeholder="Paste quiz link or enter code"
+              value={quizLink}
+              onChange={e => setQuizLink(e.target.value)}
+              className="mb-4"
+            />
+            <DialogFooter>
+              <Button
+                disabled={!quizLink.trim()}
+                onClick={() => {
+                  // Extract quiz id from link or use as code
+                  let quizId = ""
+                  try {
+                    // Try to extract from URL
+                    const url = new URL(quizLink)
+                    // Example: /user/take-quiz/123 or /take-quiz/123
+                    const parts = url.pathname.split("/")
+                    quizId = parts[parts.length - 1] || ""
+                  } catch {
+                    // Not a URL, treat as code/id
+                    quizId = quizLink.trim()
+                  }
+                  if (quizId) {
+                    setShowModal(false)
+                    setQuizLink("")
+                    router.push(`/user/take-quiz/${quizId}`)
+                  }
+                }}
+                className="bg-green-500 hover:bg-green-600"
+              >
+                Take Quiz
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Available Quizzes</h1>
-          <p className="text-muted-foreground mt-2">Select a quiz to test your knowledge</p>
+          <h1 className="text-3xl font-bold">Taken Quizzes</h1>
+          <p className="text-muted-foreground mt-2">These are the quizzes you have already taken.</p>
         </div>
 
         {loading ? (
           <div>Loading quizzes...</div>
-        ) : quizzes.length === 0 ? (
+        ) : takenQuizzes.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No quizzes available</h3>
-              <p className="text-muted-foreground">Check back later for new quizzes</p>
+              <h3 className="text-lg font-semibold mb-2">No quizzes taken yet</h3>
+              <p className="text-muted-foreground">Take a quiz to see it here.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {quizzes.map((quiz) => {
+            {takenQuizzes.map((quiz) => {
               const quizId = quiz._id || quiz.id || ""
               const alreadyTaken = takenQuizIds.includes(quizId)
               const previousAttempts = attempts.filter((a) => a.quizId === quizId)
@@ -255,7 +260,7 @@ export default function StudentQuiz() {
               return (
                 <Card key={quizId} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-xl">{quiz.name}</CardTitle>
+                    <CardTitle className="text-xl">{quiz.name} - {quiz.subject}</CardTitle>
                     <CardDescription>{quiz.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -284,19 +289,12 @@ export default function StudentQuiz() {
                       )}
 
                       <div className="flex gap-2">
-                        {!alreadyTaken ? (
-                          <Button onClick={() => startQuiz(quiz)} className="flex-1">
-                            <Play className="w-4 h-4 mr-2" />
-                            Start Quiz
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => router.push(`/user/result/${quizId}`)}
-                            className="flex-1 bg-blue-500 hover:bg-blue-600"
-                          >
-                            View Results
-                          </Button>
-                        )}
+                        <Button
+                          onClick={() => router.push(`/user/result/${quizId}`)}
+                          className="flex-1 bg-blue-500 hover:bg-blue-600"
+                        >
+                          View Results
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -305,117 +303,6 @@ export default function StudentQuiz() {
             })}
           </div>
         )}
-      </div>
-    )
-  }
-
-  // Quiz Taking View
-  if (currentView === "taking" && selectedQuiz) {
-    const currentQuestion = selectedQuiz.questions[currentQuestionIndex]
-    const progress = ((currentQuestionIndex + 1) / selectedQuiz.questions.length) * 100
-    const answeredQuestions = answers.filter((a, idx) => {
-      const q = selectedQuiz.questions[idx]
-      if (q.type === "essay") return typeof a === "string" && a.trim() !== ""
-      return a !== -1
-    }).length
-
-    return (
-      <div className="container mx-auto p-6 max-w-3xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">{selectedQuiz.name}</h1>
-            <div className="flex items-center gap-2 text-lg font-mono">
-              <Timer className="w-5 h-5" />
-              <span className={timeLeft < 300 ? "text-red-600" : ""}>{formatTime(timeLeft)}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>
-                Question {currentQuestionIndex + 1} of {selectedQuiz.questions.length}
-              </span>
-              <span>{answeredQuestions} answered</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-        </div>
-
-        {/* Question */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">
-              {currentQuestionIndex + 1}. {currentQuestion.question}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {currentQuestion.type === "multiple-choice" && (
-              <RadioGroup
-                value={answers[currentQuestionIndex]?.toString() || ""}
-                onValueChange={(value) => handleAnswerSelect(Number.parseInt(value))}
-              >
-                {currentQuestion.options.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2 p-3 rounded-lg hover:bg-muted">
-                    <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                      {option}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-            {currentQuestion.type === "true-false" && (
-              <RadioGroup
-                value={answers[currentQuestionIndex]?.toString() || ""}
-                onValueChange={(value) => handleAnswerSelect(Number.parseInt(value))}
-              >
-                {["True", "False"].map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2 p-3 rounded-lg hover:bg-muted">
-                    <RadioGroupItem value={index.toString()} id={`tf-option-${index}`} />
-                    <Label htmlFor={`tf-option-${index}`} className="flex-1 cursor-pointer">
-                      {option}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-            {currentQuestion.type === "essay" && (
-              <div>
-                <Label htmlFor={`essay-${currentQuestionIndex}`}>Your Answer</Label>
-                <Textarea
-                  id={`essay-${currentQuestionIndex}`}
-                  value={typeof answers[currentQuestionIndex] === "string" ? answers[currentQuestionIndex] : ""}
-                  onChange={e => handleEssayAnswer(e.target.value)}
-                  placeholder="Type your answer here..."
-                  rows={5}
-                  className="mt-2"
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={goToPreviousQuestion} disabled={currentQuestionIndex === 0 || submitting}>
-            Previous
-          </Button>
-
-          <div className="flex gap-2">
-            {currentQuestionIndex === selectedQuiz.questions.length - 1 ? (
-              <Button
-                onClick={handleSubmitQuiz}
-                disabled={answeredQuestions === 0 || submitting}
-                className={submitting ? "animate-pulse" : ""}
-              >
-                {submitting ? "Submitting Quiz..." : "Submit Quiz"}
-              </Button>
-            ) : (
-              <Button onClick={goToNextQuestion} disabled={submitting}>Next</Button>
-            )}
-          </div>
-        </div>
       </div>
     )
   }

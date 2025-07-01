@@ -19,7 +19,7 @@ const questionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed, // Accepts string or number
         required: true,
         validate: {
-            validator: function(value: any, props: any) {
+            validator: function (value: any, props: any) {
                 const type = props && props.parent && props.parent.type;
                 if (type === "essay") {
                     return value === "";
@@ -29,7 +29,7 @@ const questionSchema = new mongoose.Schema({
                 }
                 return true;
             },
-            message: function(props: any) {
+            message: function (props: any) {
                 const type = props && props.parent && props.parent.type;
                 if (type === "essay") {
                     return "Essay questions must have correctAnswer as an empty string.";
@@ -44,7 +44,16 @@ const questionSchema = new mongoose.Schema({
 });
 
 const quizSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'User'
+    },
     name: {
+        type: String,
+        required: true
+    },
+    subject: {
         type: String,
         required: true
     },
@@ -58,7 +67,7 @@ const quizSchema = new mongoose.Schema({
     },
     questions: [questionSchema]
 }, {
-     timestamps: true
+    timestamps: true
 })
 
-export const Quiz =  mongoose.models.Quiz || mongoose.model('Quiz', quizSchema)
+export const Quiz = mongoose.models.Quiz || mongoose.model('Quiz', quizSchema)

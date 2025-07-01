@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 export function RegisterForm({
   className,
@@ -23,16 +24,24 @@ export function RegisterForm({
     gender: "",
     grade: "",
     section: "",
+    subject: "", // add subject for teacher
     email: "",
     password: "",
     confirmPassword: "",
+    role: "", // no default, must pick
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showRoleDialog, setShowRoleDialog] = useState(true) // show on mount
 
+  // Unified handleChange for all fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.id]: e.target.value })
+  }
+
+  const handleDialogConfirm = () => {
+    setShowRoleDialog(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,6 +64,8 @@ export function RegisterForm({
           section: form.section,
           email: form.email,
           password: form.password,
+          role: form.role, // send role to backend
+          subject: form.role === "teacher" ? form.subject : undefined, // send subject only if teacher
         }),
       })
       let data
@@ -81,6 +92,19 @@ export function RegisterForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
+      {/* Role selection dialog, shown on mount if no role */}
+      <Dialog open={showRoleDialog} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false}>
+          <DialogTitle>Select your role</DialogTitle>
+          <DialogDescription>
+            Are you registering as a student or a teacher?
+          </DialogDescription>
+          <div className="flex gap-4 mt-4 justify-center">
+            <Button onClick={() => { setForm(f => ({ ...f, role: "student" })); setShowRoleDialog(false); }}>Student</Button>
+            <Button onClick={() => { setForm(f => ({ ...f, role: "teacher" })); setShowRoleDialog(false); }}>Teacher</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Card className="max-w-xl mx-auto">
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
@@ -91,6 +115,7 @@ export function RegisterForm({
         <CardContent>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Remove role dropdown */}
               <div className="grid gap-3">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
@@ -102,6 +127,19 @@ export function RegisterForm({
                   onChange={handleChange}
                 />
               </div>
+              {form.role === "teacher" && (
+                <div className="grid gap-3">
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input
+                    id="subject"
+                    type="text"
+                    placeholder="e.g. Math"
+                    required
+                    value={form.subject}
+                    onChange={handleChange}
+                  />
+                </div>
+              )}
               <div className="grid gap-3">
                 <Label htmlFor="gender">Gender</Label>
                 <select
@@ -118,28 +156,32 @@ export function RegisterForm({
                   <option value="other">Other</option>
                 </select>
               </div>
-              <div className="grid gap-3">
-                <Label htmlFor="grade">Grade</Label>
-                <Input
-                  id="grade"
-                  type="text"
-                  placeholder="e.g. 10"
-                  required
-                  value={form.grade}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="section">Section</Label>
-                <Input
-                  id="section"
-                  type="text"
-                  placeholder="e.g. A"
-                  required
-                  value={form.section}
-                  onChange={handleChange}
-                />
-              </div>
+              {form.role === "student" && (
+                <>
+                  <div className="grid gap-3">
+                    <Label htmlFor="grade">Grade</Label>
+                    <Input
+                      id="grade"
+                      type="text"
+                      placeholder="e.g. 10"
+                      required
+                      value={form.grade}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="section">Section</Label>
+                    <Input
+                      id="section"
+                      type="text"
+                      placeholder="e.g. A"
+                      required
+                      value={form.section}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </>
+              )}
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -172,7 +214,7 @@ export function RegisterForm({
                 />
               </div>
               <div className="flex flex-col gap-3 md:col-span-2">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || !form.role}>
                   {loading ? "Registering..." : "Register"}
                 </Button>
               </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Plus, Clock, FileText, Trash2, CheckCircle, Minus, Pencil } from "lucide-react"
+import { Plus, Clock, FileText, Trash2, CheckCircle, Minus, Pencil, Link as LinkIcon } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import axios from 'axios'
 import Link from "next/link"
+import { useAuth } from "@/context/AuthContext"
 
 interface Question {
   id?: string // Make id optional
@@ -34,9 +35,11 @@ interface Question {
 interface Quiz {
   _id?: string
   name: string
+  subject: string
   description: string
   timer: number
   questions: Question[]
+  userId?: string
   createdAt?: Date
 }
 
@@ -55,8 +58,11 @@ export default function QuizComponent() {
   const [quizToDelete, setQuizToDelete] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  const { userData } = useAuth()
+
   // Add quiz state
   const [quizName, setQuizName] = useState("")
+  const [quizSubject, setQuizSubject] = useState("")
   const [quizDescription, setQuizDescription] = useState("")
   const [quizTimer, setQuizTimer] = useState("")
   const [questionsForm, setQuestionsForm] = useState<QuestionForm[]>([
@@ -68,6 +74,7 @@ export default function QuizComponent() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [quizToEdit, setQuizToEdit] = useState<Quiz | null>(null)
   const [editQuizName, setEditQuizName] = useState("")
+  const [editQuizSubject, setEditQuizSubject] = useState("")
   const [editQuizDescription, setEditQuizDescription] = useState("")
   const [editQuizTimer, setEditQuizTimer] = useState("")
   const [editQuestionsForm, setEditQuestionsForm] = useState<QuestionForm[]>([])
@@ -75,7 +82,14 @@ export default function QuizComponent() {
 
   const getQuizzes = async () => {
     try {
-      const res = await axios.get('/api/quiz')
+      if (!userData?._id) {
+        setQuizzes([])
+        setLoadingQuizzes(false)
+        return
+      }
+      const res = await axios.get('/api/quiz-teacher', {
+        params: { userId: userData._id }
+      })
       if (res.status === 200 && Array.isArray(res.data)) {
         setQuizzes(res.data)
       } else {
@@ -95,7 +109,7 @@ export default function QuizComponent() {
 
   // adding new quiz
   const handleAddQuiz = async () => {
-    if (!quizName.trim() || !quizDescription.trim() || !quizTimer) return
+    if (!quizName.trim() || !quizDescription.trim() || !quizTimer || !quizSubject) return console.log('HAHAH')
 
     const validQuestions = questionsForm.filter((q) =>
       q.question.trim() &&
@@ -153,9 +167,11 @@ export default function QuizComponent() {
 
     const newQuiz: Quiz = {
       name: quizName,
+      subject: quizSubject || 'asdasd',
       description: quizDescription,
       timer: Number.parseInt(quizTimer),
       questions: backendQuestions,
+      userId: userData?._id
     }
 
     console.log("Quiz payload to backend:", newQuiz) // <-- Add this line
@@ -163,6 +179,7 @@ export default function QuizComponent() {
     try {
       setLoadingAdd(true)
       const res = await axios.post('/api/quiz', newQuiz)
+
       if (res.status === 200) {
         setQuizzes([...quizzes, { ...res.data, questions: frontendQuestions }])
         resetForm()
@@ -257,6 +274,7 @@ export default function QuizComponent() {
   const handleEditQuiz = (quiz: Quiz) => {
     setQuizToEdit(quiz)
     setEditQuizName(quiz.name)
+    setEditQuizSubject(quiz.subject)
     setEditQuizDescription(quiz.description)
     setEditQuizTimer(quiz.timer.toString())
     setEditQuestionsForm(
@@ -279,6 +297,7 @@ export default function QuizComponent() {
     try {
       const updatedQuiz = {
         name: editQuizName,
+        subject: editQuizSubject,
         description: editQuizDescription,
         timer: Number.parseInt(editQuizTimer),
         questions: validQuestions.map((q, idx) => {
@@ -344,6 +363,14 @@ export default function QuizComponent() {
     }
   }
 
+  // Copy quiz link handler
+  const handleCopyQuizLink = useCallback((quizId: string) => {
+    if (typeof window !== "undefined") {
+      const url = `${window.location.origin}/user/take-quiz/${quizId}`
+      navigator.clipboard.writeText(url)
+    }
+  }, [])
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -370,7 +397,7 @@ export default function QuizComponent() {
                 {/* Basic Quiz Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Quiz Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="quiz-name">Quiz Name</Label>
                       <Input
@@ -378,6 +405,16 @@ export default function QuizComponent() {
                         value={quizName}
                         onChange={(e) => setQuizName(e.target.value)}
                         placeholder="Enter quiz name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="quiz-subject">Subject and Class</Label>
+                      <Input
+                        id="quiz-subject"
+                        type="text"
+                        value={quizSubject}
+                        onChange={(e) => setQuizSubject(e.target.value)}
+                        placeholder="Enter subject and class ( Math 2D )"
                       />
                     </div>
                     <div>
@@ -576,7 +613,7 @@ export default function QuizComponent() {
               <div className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Quiz Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="edit-quiz-name">Quiz Name</Label>
                       <Input
@@ -584,6 +621,16 @@ export default function QuizComponent() {
                         value={editQuizName}
                         onChange={(e) => setEditQuizName(e.target.value)}
                         placeholder="Enter quiz name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-quiz-subject">Subject and Class</Label>
+                      <Input
+                        id="edit-quiz-subject"
+                        type="text"
+                        value={editQuizSubject}
+                        onChange={(e) => setEditQuizSubject(e.target.value)}
+                        placeholder="Enter subject and class ( Math 2D )"
                       />
                     </div>
                     <div>
@@ -782,7 +829,7 @@ export default function QuizComponent() {
                     <div className="flex-1">
                       <CardTitle className="text-lg">
                         <Link href={`/admin/answers/${quiz._id}`}>
-                          {quiz.name}
+                          {quiz.name} - {quiz.subject}
                         </Link>
                       </CardTitle>
                       <CardDescription className="mt-1">{quiz.description}</CardDescription>
@@ -796,7 +843,16 @@ export default function QuizComponent() {
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
-
+                      {/* Copy Link Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => quiz._id && handleCopyQuizLink(quiz._id)}
+                        title="Copy Quiz Link"
+                        className="text-blue-500 hover:text-blue-600"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

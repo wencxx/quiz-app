@@ -32,13 +32,16 @@ export default function Page() {
   useEffect(() => {
     async function fetchDashboard() {
       setLoading(true);
-      const res = await fetch("/api/dashboard");
+      // Pass userId as query param
+      const userId = userData?._id;
+      const url = userId ? `/api/dashboard?userId=${userId}` : "/api/dashboard";
+      const res = await fetch(url);
       const data = await res.json();
       setDashboard(data);
       setLoading(false);
     }
     fetchDashboard();
-  }, []);
+  }, [userData?._id]);
 
   if (loading) return <div>Loading dashboard...</div>;
   if (!dashboard) return <div>Failed to load dashboard data.</div>;

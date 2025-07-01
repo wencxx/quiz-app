@@ -9,17 +9,44 @@ export interface IUser extends Document {
   section: string
   email: string
   password: string
+  subject: string
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
   name: { type: String, required: true },
   gender: { type: String, required: true },
-  grade: { type: String, required: true },
-  section: { type: String, required: true },
-  role: { type: String, required: true, default: 'student' },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true, select: false },
-})
+  role: { type: String, required: true, enum: ["student", "teacher"], default: "student" },
+
+  grade: {
+    type: String,
+    validate: {
+      validator: function (this: IUser, v: string) {
+        return this.role !== "student" || !!v
+      },
+      message: "Grade is required for students",
+    },
+  },
+  section: {
+    type: String,
+    validate: {
+      validator: function (this: IUser, v: string) {
+        return this.role !== "student" || !!v
+      },
+      message: "Section is required for students",
+    },
+  },
+  subject: {
+    type: String,
+    validate: {
+      validator: function (this: IUser, v: string) {
+        return this.role !== "teacher" || !!v
+      },
+      message: "Subject is required for teachers",
+    },
+  },
+}, { timestamps: true, strict: false })
 
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next()
