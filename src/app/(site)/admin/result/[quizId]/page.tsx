@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Trophy, CheckCircle, XCircle, FileText, RotateCcw } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
+import { Input } from "@/components/ui/input" // Add this import for input field
 
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60)
@@ -43,8 +44,13 @@ interface Question {
   correctAnswer: number | string
 }
 
+interface AttemptAnswer {
+  answer: number | string
+  points?: number
+}
+
 interface Attempt {
-  answers: (number | string)[]
+  answers: AttemptAnswer[]
   score: number
   totalQuestions: number
   timeSpent: number
@@ -60,6 +66,9 @@ export default function QuizResultPage() {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [attempt, setAttempt] = useState<Attempt | null>(null)
   const [loading, setLoading] = useState(true)
+  const [grading, setGrading] = useState<{ [index: number]: number }>({})
+  const [gradingLoading, setGradingLoading] = useState<{ [index: number]: boolean }>({})
+  const [studentUserId, setStudentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,6 +85,8 @@ export default function QuizResultPage() {
           : null
         setQuiz(foundQuiz)
         if (answerRes.data && answerRes.data.result && foundQuiz) {
+          // Save the student userId for grading
+          setStudentUserId(answerRes.data.result.userId)
           // Calculate score
           let score = 0
           foundQuiz.questions.forEach((question: Question, idx: number) => {
@@ -86,7 +97,7 @@ export default function QuizResultPage() {
             }
           })
           setAttempt({
-            answers: answerRes.data.result.answers.map((a: { answer: number | string }) => a.answer),
+            answers: answerRes.data.result.answers, // Use as-is, now objects
             score,
             totalQuestions: foundQuiz.questions.length,
             timeSpent: answerRes.data.result.timeSpent || 0, // use backend value
@@ -104,6 +115,24 @@ export default function QuizResultPage() {
     }
     if (quizId && userData?._id) fetchData()
   }, [quizId, userData?._id])
+
+  // Handler for grading essay questions
+  const handleGradeEssay = async (questionIdx: number, maxPoints: number) => {
+    const points = grading[questionIdx]
+    if (typeof points !== "number" || points < 0 || points > maxPoints) return
+    if (!studentUserId) return // Don't proceed if no student userId
+    setGradingLoading((prev) => ({ ...prev, [questionIdx]: true }))
+    try {
+      await axios.patch("/api/admin-answer", {
+        quizId,
+        userId: studentUserId, // Use the student userId, not the teacher's
+        questionIndex: questionIdx,
+        points,
+      })
+      window.location.reload()
+    } catch {}
+    setGradingLoading((prev) => ({ ...prev, [questionIdx]: false }))
+  }
 
   if (loading) {
     return <div>Loading result...</div>
@@ -200,11 +229,18 @@ export default function QuizResultPage() {
         <CardContent>
           <div className="space-y-6">
             {quiz.questions.map((question: any, index: number) => {
-              const userAnswer = attempt.answers[index]
+              const answerObj = attempt.answers[index]
+              const userAnswer = answerObj?.answer
               const isCorrect =
                 (question.type === "multiple-choice" || question.type === "true-false")
                   ? userAnswer === question.correctAnswer
                   : undefined
+
+              // Find points for essay answer if available
+              let essayPoints = undefined
+              if (question.type === "essay" && answerObj && typeof answerObj === "object" && "points" in answerObj) {
+                essayPoints = answerObj.points
+              }
 
               return (
                 <div key={question.id || index} className="border rounded-lg p-4">
@@ -219,8 +255,19 @@ export default function QuizResultPage() {
                       <FileText className="w-5 h-5 text-muted-foreground mt-1 flex-shrink-0" />
                     )}
                     <div className="flex-1">
-                      <h4 className="font-medium mb-2">
-                        {index + 1}. {question.question}
+                      <h4 className="font-medium mb-2 flex justify-between items-center">
+                        <span>{index + 1}. {question.question}</span>
+                        {(question.type === "multiple-choice" || question.type === "true-false") ? (
+                          <span className={`text-sm ${isCorrect ? 'text-green-500' : 'text-red-500'} font-medium`}>
+                            {isCorrect ? question.points : '0'} point(s)
+                          </span>
+                        ) : (
+                          <span className={`text-sm font-medium ${typeof essayPoints === "number" ? 'text-green-500' : 'text-red-500'}`}>
+                            {typeof essayPoints === "number"
+                              ? `Graded: ${essayPoints} / ${question.points} point(s)`
+                              : "Not graded (0 points)"}
+                          </span>
+                        )}
                       </h4>
                       <div className="space-y-1 text-sm">
                         <p>
@@ -248,6 +295,39 @@ export default function QuizResultPage() {
                                 : ""}
                             </span>
                           </p>
+                        )}
+                        {/* Essay grading UI */}
+                        {question.type === "essay" && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={question.points}
+                              step={1}
+                              className="w-24"
+                              placeholder="Points"
+                              value={grading[index] ?? (typeof essayPoints === "number" ? essayPoints : "")}
+                              onChange={e => {
+                                let val = Number(e.target.value)
+                                if (val > question.points) val = question.points
+                                if (val < 0) val = 0
+                                setGrading(prev => ({ ...prev, [index]: val }))
+                              }}
+                              disabled={gradingLoading[index]}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleGradeEssay(index, question.points)}
+                              disabled={
+                                gradingLoading[index] ||
+                                typeof grading[index] !== "number" ||
+                                grading[index] < 0 ||
+                                grading[index] > question.points
+                              }
+                            >
+                              {gradingLoading[index] ? "Saving..." : "Save Grade"}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>

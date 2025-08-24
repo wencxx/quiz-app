@@ -6,6 +6,10 @@ const questionSchema = new mongoose.Schema({
         enum: ["multiple-choice", "true-false", "essay"],
         required: true
     },
+    points: {
+        type: Number,
+        required: true
+    },
     question: {
         type: String,
         required: true

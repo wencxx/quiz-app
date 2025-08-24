@@ -43,8 +43,13 @@ interface Question {
   correctAnswer: number | string
 }
 
+interface AttemptAnswer {
+  answer: number | string
+  points?: number
+}
+
 interface Attempt {
-  answers: (number | string)[]
+  answers: AttemptAnswer[]
   score: number
   totalQuestions: number
   timeSpent: number
@@ -86,10 +91,10 @@ export default function QuizResultPage() {
             }
           })
           setAttempt({
-            answers: answerRes.data.result.answers.map((a: { answer: number | string }) => a.answer),
+            answers: answerRes.data.result.answers, // Use as objects
             score,
             totalQuestions: foundQuiz.questions.length,
-            timeSpent: answerRes.data.result.timeSpent || 0, // use backend value
+            timeSpent: answerRes.data.result.timeSpent || 0,
             completedAt: answerRes.data.result.updatedAt || answerRes.data.result.createdAt,
           })
         } else {
@@ -200,7 +205,8 @@ export default function QuizResultPage() {
         <CardContent>
           <div className="space-y-6">
             {quiz.questions.map((question: any, index: number) => {
-              const userAnswer = attempt.answers[index]
+              const answerObj = attempt.answers[index]
+              const userAnswer = answerObj?.answer
               const isCorrect =
                 (question.type === "multiple-choice" || question.type === "true-false")
                   ? userAnswer === question.correctAnswer
@@ -219,8 +225,19 @@ export default function QuizResultPage() {
                       <FileText className="w-5 h-5 text-muted-foreground mt-1 flex-shrink-0" />
                     )}
                     <div className="flex-1">
-                      <h4 className="font-medium mb-2">
-                        {index + 1}. {question.question}
+                      <h4 className="font-medium mb-2 flex justify-between items-center">
+                        <span>{index + 1}. {question.question}</span>
+                        <span className={`text-sm ${isCorrect || typeof answerObj?.points === "number"  ?  'text-green-500' : 'text-red-500'} font-medium`}>
+                          {question.type === 'essay'
+                            ? (typeof answerObj?.points === "number"
+                                ? `Graded: ${answerObj.points} / ${question.points} points`
+                                : "Not graded (0 points)"
+                              )
+                            : isCorrect
+                              ? `${question.points} points`
+                              : '0  point(s)'
+                          }
+                        </span>
                       </h4>
                       <div className="space-y-1 text-sm">
                         <p>

@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
     // Only return safe user data
-    const { userId, email, _id, role, name } = payload as { userId: string, email: string, _id?: string, role: string, name: string}
-    return NextResponse.json({ userId, email, _id, role, name })
+    const { userId, email, _id, role, firstname, middlename, lastname } = payload as { userId: string, email: string, _id?: string, role: string, firstname: string, middlename: string, lastname: string }
+    return NextResponse.json({ userId, email, _id, role, firstname, middlename, lastname })
   } catch (err) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

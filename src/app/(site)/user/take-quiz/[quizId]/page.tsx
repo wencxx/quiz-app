@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext"
 
 interface Question {
   type: "multiple-choice" | "true-false" | "essay"
+  points: number
   question: string
   options: string[]
 }
@@ -160,8 +161,9 @@ export default function TakeQuizPage({ params }: { params: Promise<{ quizId: str
       {/* Question */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">
-            {currentQuestionIndex + 1}. {currentQuestion.question}
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span >{currentQuestionIndex + 1}. {currentQuestion.question}</span>
+            <span className="text-sm text-green-500 font-medium">{currentQuestion.points} point(s)</span>
           </CardTitle>
         </CardHeader>
         <CardContent>

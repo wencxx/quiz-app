@@ -2,7 +2,9 @@ import mongoose, { Document } from "mongoose"
 import bcrypt from "bcryptjs"
 
 export interface IUser extends Document {
-  name: string
+  firstname: string
+  middlename: string
+  lastname: string
   gender: string
   grade: string
   role: string
@@ -13,7 +15,9 @@ export interface IUser extends Document {
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
-  name: { type: String, required: true },
+  firstname: { type: String, required: true },
+  middlename: { type: String, required: true },
+  lastname: { type: String, required: true },
   gender: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true, select: false },
@@ -35,15 +39,6 @@ const UserSchema = new mongoose.Schema<IUser>({
         return this.role !== "student" || !!v
       },
       message: "Section is required for students",
-    },
-  },
-  subject: {
-    type: String,
-    validate: {
-      validator: function (this: IUser, v: string) {
-        return this.role !== "teacher" || !!v
-      },
-      message: "Subject is required for teachers",
     },
   },
 }, { timestamps: true, strict: false })

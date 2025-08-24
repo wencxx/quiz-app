@@ -9,7 +9,9 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const {
-      name,
+      firstname,
+      middlename,
+      lastname,
       gender,
       email,
       password,
@@ -20,16 +22,12 @@ export async function POST(req: NextRequest) {
     } = body
 
     // Validate required fields based on role
-    if (!name || !gender || !email || !password || !role) {
+    if (!firstname || !middlename || !lastname || !gender || !email || !password || !role) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 })
     }
 
     if (role === "student" && (!grade || !section)) {
       return NextResponse.json({ message: "Grade and section are required for students" }, { status: 400 })
-    }
-
-    if (role === "teacher" && !subject) {
-      return NextResponse.json({ message: "Subject is required for teachers" }, { status: 400 })
     }
 
     const existing = await User.findOne({ email })
@@ -39,14 +37,15 @@ export async function POST(req: NextRequest) {
 
     // Create user with role-specific fields
     const user = new User({
-      name,
+      firstname,
+      middlename,
+      lastname,
       gender,
       email,
       password, // plain text password if using pre-save hashing
       role,
       grade: role === "student" ? grade : undefined,
       section: role === "student" ? section : undefined,
-      subject: role === "teacher" ? subject : undefined
     })
 
     await user.save()

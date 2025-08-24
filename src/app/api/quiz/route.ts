@@ -19,6 +19,7 @@ export async function POST(request: Request){
     console.log(body)
     type QuestionInput = {
         type: "multiple-choice" | "true-false" | "essay";
+        points: number;
         question: string;
         options?: string[];
         correctAnswer?: number | string;

@@ -4,7 +4,9 @@ import React, { createContext, useContext, useEffect, useState } from "react"
 
 interface UserData {
   userId: string
-  name: string
+  firstname: string
+  middlename: string
+  lastname: string
   email: string
   _id?: string // add _id
   role?: string // add role
@@ -51,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return res.json()
         })
         .then((data) => {
-          setUserDataState({ userId: data.userId, email: data.email, _id: data._id, role: data.role, name: data.name })
+          setUserDataState({ userId: data.userId, email: data.email, _id: data._id, role: data.role, firstname: data.firstname, middlename: data.middlename, lastname: data.lastname })
         })
         .catch(() => {
           setUserDataState(null)
@@ -79,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return res.json()
         })
         .then((data) => {
-          setUserDataState({ userId: data.userId, email: data.email, _id: data._id, role: data.role, name: data.name })
+          setUserDataState({ userId: data.userId, email: data.email, _id: data._id, role: data.role, firstname: data.firstname, middlename: data.middlename, lastname: data.lastname })
         })
         .catch(() => {
           setUserDataState(null)

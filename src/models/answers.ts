@@ -16,6 +16,7 @@ const answerSchema = new mongoose.Schema({
   answers: [
     {
       questionIndex: { type: Number, required: true },
+      points: { type: Number }, // for essay answers, set by teacher; for MC/TF, can be undefined
       answer: mongoose.Schema.Types.Mixed, // string or number
     }
   ],

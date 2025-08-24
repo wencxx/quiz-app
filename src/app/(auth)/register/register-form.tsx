@@ -20,11 +20,12 @@ export function RegisterForm({
   ...props
 }: React.ComponentProps<"div">) {
   const [form, setForm] = useState({
-    name: "",
+    firstname: "",
+    middlename: "",
+    lastname: "",
     gender: "",
     grade: "",
     section: "",
-    subject: "", // add subject for teacher
     email: "",
     password: "",
     confirmPassword: "",
@@ -58,14 +59,15 @@ export function RegisterForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name,
+          firstname: form.firstname,
+          middlename: form.middlename,
+          lastname: form.lastname,
           gender: form.gender,
           grade: form.grade,
           section: form.section,
           email: form.email,
           password: form.password,
           role: form.role, // send role to backend
-          subject: form.role === "teacher" ? form.subject : undefined, // send subject only if teacher
         }),
       })
       let data
@@ -93,7 +95,7 @@ export function RegisterForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       {/* Role selection dialog, shown on mount if no role */}
-      <Dialog open={showRoleDialog} onOpenChange={() => {}}>
+      <Dialog open={showRoleDialog} onOpenChange={() => { }}>
         <DialogContent showCloseButton={false}>
           <DialogTitle>Select your role</DialogTitle>
           <DialogDescription>
@@ -117,29 +119,38 @@ export function RegisterForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Remove role dropdown */}
               <div className="grid gap-3">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="firstname">First Name</Label>
                 <Input
-                  id="name"
+                  id="firstname"
                   type="text"
                   placeholder="John Doe"
                   required
-                  value={form.name}
+                  value={form.firstname}
                   onChange={handleChange}
                 />
               </div>
-              {form.role === "teacher" && (
-                <div className="grid gap-3">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    type="text"
-                    placeholder="e.g. Math"
-                    required
-                    value={form.subject}
-                    onChange={handleChange}
-                  />
-                </div>
-              )}
+              <div className="grid gap-3">
+                <Label htmlFor="middlename">Middle Name</Label>
+                <Input
+                  id="middlename"
+                  type="text"
+                  placeholder="John Doe"
+                  required
+                  value={form.middlename}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="lastname">Last Name</Label>
+                <Input
+                  id="lastname"
+                  type="text"
+                  placeholder="John Doe"
+                  required
+                  value={form.lastname}
+                  onChange={handleChange}
+                />
+              </div>
               <div className="grid gap-3">
                 <Label htmlFor="gender">Gender</Label>
                 <select

@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext"
 interface Question {
   id?: string // Make id optional
   type: "multiple-choice" | "true-false" | "essay"
+  points: number
   question: string
   options: string[]
   correctAnswer: number | string
@@ -45,6 +46,7 @@ interface Quiz {
 
 interface QuestionForm {
   type: "multiple-choice" | "true-false" | "essay"
+  points: number
   question: string
   options: string[]
   correctAnswer: number | string
@@ -66,7 +68,7 @@ export default function QuizComponent() {
   const [quizDescription, setQuizDescription] = useState("")
   const [quizTimer, setQuizTimer] = useState("")
   const [questionsForm, setQuestionsForm] = useState<QuestionForm[]>([
-    { type: "multiple-choice", question: "", options: ["", "", "", ""], correctAnswer: 0 },
+    { type: "multiple-choice", points: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 },
   ])
   const [loadingAdd, setLoadingAdd] = useState(false)
 
@@ -121,20 +123,22 @@ export default function QuizComponent() {
     )
     if (validQuestions.length === 0) return
 
-    // For frontend state, include id
+    // For frontend state, include id and points
     const frontendQuestions = validQuestions.map((q, index) => ({
       id: `${Date.now()}-${index}`,
       type: q.type,
+      points: q.points,
       question: q.question,
       options: q.type === "essay" ? [] : [...q.options],
       correctAnswer: q.type === "essay" ? "" : q.correctAnswer,
     }))
 
-    // For backend, always set correctAnswer for all types
+    // For backend, always set correctAnswer for all types, and include points
     const backendQuestions = validQuestions.map((q) => {
       if (q.type === "essay") {
         return {
           type: q.type,
+          points: q.points,
           question: q.question,
           options: [],
           correctAnswer: "" // Always set for essay
@@ -143,6 +147,7 @@ export default function QuizComponent() {
       if (q.type === "true-false") {
         return {
           type: q.type,
+          points: q.points,
           question: q.question,
           options: ["True", "False"],
           correctAnswer: typeof q.correctAnswer === "number" ? q.correctAnswer : 0
@@ -151,6 +156,7 @@ export default function QuizComponent() {
       if (q.type === "multiple-choice") {
         return {
           type: q.type,
+          points: q.points,
           question: q.question,
           options: Array.isArray(q.options) ? q.options : ["", "", "", ""],
           correctAnswer: typeof q.correctAnswer === "number" ? q.correctAnswer : 0
@@ -159,6 +165,7 @@ export default function QuizComponent() {
       // fallback
       return {
         type: q.type,
+        points: q.points,
         question: q.question,
         options: [],
         correctAnswer: "" // Always set fallback
@@ -207,7 +214,7 @@ export default function QuizComponent() {
     setQuizName("")
     setQuizDescription("")
     setQuizTimer("")
-    setQuestionsForm([{ type: "multiple-choice", question: "", options: ["", "", "", ""], correctAnswer: 0 }])
+    setQuestionsForm([{ type: "multiple-choice", points: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 }])
   }
 
   const handleDeleteQuiz = async (quizId?: string) => {
@@ -234,7 +241,7 @@ export default function QuizComponent() {
   const addQuestion = () => {
     setQuestionsForm([
       ...questionsForm,
-      { type: "multiple-choice", question: "", options: ["", "", "", ""], correctAnswer: 0 },
+      { type: "multiple-choice", points: 1, question: "", options: ["", "", "", ""], correctAnswer: 0 },
     ])
   }
 
@@ -280,6 +287,7 @@ export default function QuizComponent() {
     setEditQuestionsForm(
       quiz.questions.map(q => ({
         type: q.type,
+        points: q.points,
         question: q.question,
         options: [...q.options],
         correctAnswer: q.correctAnswer
@@ -305,6 +313,7 @@ export default function QuizComponent() {
             return {
               id: quizToEdit?.questions[idx]?.id || `${Date.now()}-${idx}`,
               type: q.type,
+              points: q.points,
               question: q.question,
               options: [],
               correctAnswer: "" // Always set for essay
@@ -314,6 +323,7 @@ export default function QuizComponent() {
             return {
               id: quizToEdit?.questions[idx]?.id || `${Date.now()}-${idx}`,
               type: q.type,
+              points: q.points,
               question: q.question,
               options: ["True", "False"],
               correctAnswer: typeof q.correctAnswer === "number" ? q.correctAnswer : 0
@@ -323,6 +333,7 @@ export default function QuizComponent() {
             return {
               id: quizToEdit?.questions[idx]?.id || `${Date.now()}-${idx}`,
               type: q.type,
+              points: q.points,
               question: q.question,
               options: Array.isArray(q.options) ? q.options : ["", "", "", ""],
               correctAnswer: typeof q.correctAnswer === "number" ? q.correctAnswer : 0
@@ -332,6 +343,7 @@ export default function QuizComponent() {
           return {
             id: quizToEdit?.questions[idx]?.id || `${Date.now()}-${idx}`,
             type: q.type,
+            points: q.points,
             question: q.question,
             options: [],
             correctAnswer: "" // Always set fallback
@@ -469,17 +481,30 @@ export default function QuizComponent() {
                             </Button>
                           )}
                         </div>
-                        <div className="flex gap-4 items-center">
-                          <Label>Type:</Label>
-                          <select
-                            value={questionForm.type}
-                            onChange={e => updateQuestion(questionIndex, "type", e.target.value)}
-                            className="border rounded px-2 py-1"
-                          >
-                            <option value="multiple-choice">Multiple Choice</option>
-                            <option value="true-false">True / False</option>
-                            <option value="essay">Essay</option>
-                          </select>
+                        <div className="flex gap-x-5">
+                          <div className="flex gap-4 items-center">
+                            <Label>Type:</Label>
+                            <select
+                              value={questionForm.type}
+                              onChange={e => updateQuestion(questionIndex, "type", e.target.value)}
+                              className="border rounded px-2 py-1"
+                            >
+                              <option value="multiple-choice">Multiple Choice</option>
+                              <option value="true-false">True / False</option>
+                              <option value="essay">Essay</option>
+                            </select>
+                          </div>
+                          <div className="flex gap-4 items-center">
+                            <Label>Points:</Label>
+                            <Input
+                              id={`points-${questionIndex}`}
+                              type="number"
+                              value={questionForm.points}
+                              onChange={(e) => updateQuestion(questionIndex, "points", Number.parseInt(e.target.value))}
+                              placeholder="Points"
+                              min="1"
+                            />
+                          </div>
                         </div>
                         <Textarea
                           value={questionForm.question}
@@ -697,6 +722,21 @@ export default function QuizComponent() {
                             <option value="true-false">True / False</option>
                             <option value="essay">Essay</option>
                           </select>
+                          <div className="flex gap-4 items-center">
+                            <Label>Points:</Label>
+                            <Input
+                              id={`edit-points-${questionIndex}`}
+                              type="number"
+                              value={questionForm.points}
+                              onChange={(e) => {
+                                const updated = [...editQuestionsForm]
+                                updated[questionIndex].points = Number.parseInt(e.target.value)
+                                setEditQuestionsForm(updated)
+                              }}
+                              placeholder="Points"
+                              min="1"
+                            />
+                          </div>
                         </div>
                         <Textarea
                           value={questionForm.question}
@@ -827,7 +867,7 @@ export default function QuizComponent() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-lg hover:underline">
                         <Link href={`/admin/answers/${quiz._id}`}>
                           {quiz.name} - {quiz.subject}
                         </Link>

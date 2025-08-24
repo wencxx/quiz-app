@@ -97,7 +97,7 @@ export default function AnswersPage() {
                       <td className="py-2 px-2">{ans.score ?? "N/A"}</td>
                       <td className="py-2 px-2">{ans.createdAt ? new Date(ans.createdAt).toLocaleString() : "N/A"}</td>
                       <td>
-                        <Link href={`/admin/result/${quizId}`}>View Details</Link>
+                        <Link href={`/admin/result/${quizId}`} className="bg-blue-500 text-white px-2 py-1 rounded">View Details</Link>
                       </td>
                     </tr>
                   ))}
